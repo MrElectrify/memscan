@@ -3,9 +3,25 @@ use std::str::FromStr;
 use subslice_index::subslice_index;
 
 /// A memory pattern. Wildcards are represented in raw buffers
-/// as null bytes
+/// as null bytes. Must not be empty
 pub struct Pattern {
     buf: Vec<u8>
+}
+
+impl Pattern {
+    /// Tests if a pattern matches a slice of bytes
+    ///
+    /// # Arguments
+    ///
+    /// `buf`: The slice of bytes
+    pub fn matches(&self, buf: &[u8]) -> bool {
+        for (pattern_byte, buf_byte) in self.buf.iter().zip(buf.iter()) {
+            if *pattern_byte != 0x00 && pattern_byte != buf_byte {
+                return false
+            }
+        }
+        true
+    }
 }
 
 impl From<&[u8]> for Pattern {
@@ -41,7 +57,93 @@ impl FromStr for Pattern {
 /// # Arguments
 ///
 /// `buf`: The buffer to search for the pattern in
-/// `pattern`: The pattern to find
-pub fn find_pattern(buf: &[u8], pattern: Pattern) -> Option<Vec<&[u8]>> {
-    None
+/// `pattern`: The pattern to find. Must not be empty
+pub fn find_pattern(buf: &[u8], pattern: Pattern) -> Vec<&[u8]> {
+    buf.windows(pattern.buf.len()).filter(|&window| pattern.matches(window)).collect()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn empty_pattern() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[][..]);
+        find_pattern(buf, pattern);
+    }
+
+    #[test]
+    fn not_empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[1, 2][..]);
+        assert!(!find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[1, 3][..]);
+        assert!(find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn simple_wildcard_not_empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[1, 0x00, 3][..]);
+        assert!(!find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn simple_wildcard_empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[1, 0x00, 4][..]);
+        assert!(find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn wildcard_start_not_empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[0x00, 3][..]);
+        assert!(!find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn wildcard_start_empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[0x00, 1][..]);
+        assert!(find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn wildcard_end_not_empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[1, 2, 0x00][..]);
+        assert!(!find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn wildcard_end_empty() {
+        let buf = &[1, 2, 3];
+        let pattern = Pattern::from(&[2, 3, 0x00][..]);
+        assert!(find_pattern(buf, pattern).is_empty());
+    }
+
+    #[test]
+    fn multi_match() {
+        let buf = &[1, 2, 3, 4, 3, 2, 1, 2, 3];
+        let pattern = Pattern::from(&[1, 2, 0x00][..]);
+        assert_eq!(find_pattern(buf, pattern).len(), 2);
+    }
+
+    #[test]
+    fn function_signature() {
+        let buf = include_bytes!("..\\test\\crt.exe");
+        let pattern = Pattern::from(&[0xe8, 0x00, 0x00, 0x00, 0x00, 0xe8, 0x00, 0x00, 0x00, 0x00, 0x48, 0x8b, 0xd8][..]);
+        let result = find_pattern(buf, pattern);
+        assert!(!result.is_empty());
+        assert_eq!(result[0], &[0xe8, 0x1c, 0x04, 0x00, 0x00, 0xe8, 0xcb, 0x05, 0x00, 0x00, 0x48, 0x8b, 0xd8][..]);
+        assert_eq!(subslice_index(buf, result[0]), 0x5bb);
+    }
 }
