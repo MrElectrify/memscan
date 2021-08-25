@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let buf = hex::decode(&args[1])?;
     let pattern = match Pattern::from_str(&args[2]) {
         Ok(pattern) => pattern,
-        Err(idx) => { eprintln!("Pattern parse error at index {}", idx); return Ok(()) }
+        Err(idx) => { eprintln!("Pattern parse error at index {}: {}", idx, &args[2][idx..]); return Ok(()) }
     };
     let result = find_pattern(&buf, pattern);
     println!("Result: {:?}", result);

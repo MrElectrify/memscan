@@ -3,6 +3,10 @@ name = "memscan"
 version = "0.1.0"
 edition = "2018"
 
+[profile.release]
+codegen-units = 1
+lto = true
+
 [dependencies]
 hex = "0.4"
 rayon = "1.5"
