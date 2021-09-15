@@ -9,7 +9,7 @@ pub struct Pattern {
 }
 
 impl Pattern {
-    /// Tests if a pattern matches a slice of bytes
+    /// Tests if a pattern matches a slice of bytes exactly
     ///
     /// # Arguments
     ///
