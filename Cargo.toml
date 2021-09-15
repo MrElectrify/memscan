@@ -1,7 +1,14 @@
 [package]
 name = "memscan"
+authors = ["Andrew Buck"]
+description = "A pattern-based memory scanner"
+documentation = "https://docs.rs/crate/memscan"
 version = "0.1.0"
 edition = "2018"
+license-file = "LICENSE"
+readme = "README.md"
+repository = "https://github.com/MrElectrify/memscan"
+keywords = ["pattern-scan", "find-pattern"]
 
 [profile.release]
 codegen-units = 1
